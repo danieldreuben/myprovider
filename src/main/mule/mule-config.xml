@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<global-property doc:name="Global Property" doc:id="3e7d1c9e-075b-4fdc-b52c-1e7dc375c119" name=" anypoint.platform.client_id" value="client1" />
+	<global-property doc:name="Global Property" doc:id="6b1f76d4-b1dd-4b78-ad1b-5393bed434c9" name="anypoint.platform.client_secret" value="clientsecret1" />
+</mule>

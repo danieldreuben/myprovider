@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"      
+      xmlns:security="http://www.springframework.org/schema/security"      
+      xmlns:mule-ss="http://www.mulesoft.org/schema/mule/spring-security"      
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:oauth2-provider="http://www.mulesoft.org/schema/mule/oauth2-provider"
+      xmlns:spring="http://www.mulesoft.org/schema/mule/spring" 
+      xmlns:beans="http://www.springframework.org/schema/beans"
+      xmlns:os="http://www.mulesoft.org/schema/mule/os"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/oauth2-provider http://www.mulesoft.org/schema/mule/oauth2-provider/current/mule-oauth2-provider.xsd
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+        http://www.mulesoft.org/schema/mule/spring-security  http://www.springframework.org/schema/security/spring-security-4.1.xsd
+        http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+
+    <http:listener-config name="listenerConfig" basePath="/">
+        <http:listener-connection host="0.0.0.0"
+                                  port="8081"/>
+    </http:listener-config>
+ 
+	<security:authentication-manager id="resourceOwnerAuthenticationManager">
+	   <security:authentication-provider>
+	       <security:user-service>
+	           <security:user name="user" password="pass"
+	             authorities="ROLE_USER" />
+	       </security:user-service>
+	   </security:authentication-provider>
+	</security:authentication-manager>
+
+	<security:authentication-manager id="clientAuthenticationManager">
+	   <security:authentication-provider>
+	       <security:user-service>
+	           <security:user name="user" password="pass"
+	             authorities="ROLE_USER" />
+	       </security:user-service>
+	   </security:authentication-provider>
+	</security:authentication-manager>
+  
+    <spring:security-manager>
+        <spring:delegate-security-provider name="clientSecurityProvider"
+                                           delegate-ref="clientAuthenticationManager"/>
+        <spring:delegate-security-provider name="resourceOwnerSecurityProvider"
+                                           delegate-ref="resourceOwnerAuthenticationManager"/>
+    </spring:security-manager>
+
+    <os:object-store name="clientObjectStore"
+                     persistent="true"/>
+    <os:object-store name="authorizationCodeObjectStore"
+                     entryTtl="600"
+                     entryTtlUnit="SECONDS"
+                     persistent="true"/>
+    <os:object-store name="tokenObjectStore"
+                     entryTtl="86400"
+                     entryTtlUnit="SECONDS"
+                     persistent="true"/>
+
+    <global-property name="allSupportedGrantTypes" value="AUTHORIZATION_CODE,IMPLICIT,RESOURCE_OWNER_PASSWORD_CREDENTIALS,CLIENT_CREDENTIALS"/>
+
+    <oauth2-provider:config name="OAuth2Provider"
+                            providerName="OAuth2Provider"
+                            resourceOwnerSecurityProvider="resourceOwnerSecurityProvider"
+                            clientSecurityProvider="clientSecurityProvider"
+                            supportedGrantTypes="${allSupportedGrantTypes}"
+                            listenerConfig="listenerConfig"
+                            clientStore="clientObjectStore"
+                            scopes="GUEST,USER,ADMIN"
+                            defaultScopes="USER"
+                            supportedGrantTypes="${allSupportedGrantTypes}">
+        <oauth2-provider:client-validation-rate-limiter>
+            <oauth2-provider:period-rate-limiter/>
+        </oauth2-provider:client-validation-rate-limiter>
+        <oauth2-provider:token-config path="/token"
+                                      tokenStore="tokenObjectStore"
+                                      tokenTtl="86400"
+                                      tokenTtlTimeUnit="SECONDS">
+            <oauth2-provider:refresh-token-strategy>
+                <oauth2-provider:multiple-refresh-tokens/>
+            </oauth2-provider:refresh-token-strategy>
+        </oauth2-provider:token-config>
+        <oauth2-provider:authorization-config loginPage="static/LOGIN.html"
+                                              path="/authorize"
+                                              authorizationCodeStore="authorizationCodeObjectStore"/>
+        <oauth2-provider:clients>
+            <oauth2-provider:client clientId="clientId1"
+                                    secret="clientSecret1"
+                                    principal="clusr"
+                                    type="CONFIDENTIAL">
+                <oauth2-provider:client-redirect-uris>
+                    <oauth2-provider:client-redirect-uri>
+                        http://fake/redirect
+                    </oauth2-provider:client-redirect-uri>
+                </oauth2-provider:client-redirect-uris>
+                <oauth2-provider:client-authorized-grant-types>
+                    <oauth2-provider:client-authorized-grant-type>
+                        AUTHORIZATION_CODE
+                    </oauth2-provider:client-authorized-grant-type>
+                </oauth2-provider:client-authorized-grant-types>
+            </oauth2-provider:client>
+        </oauth2-provider:clients>
+    </oauth2-provider:config>
+  
+ <!-- 
+    <oauth2-provider:config name="Oauth2_Provider_Config" doc:name="Oauth2 Provider Config" doc:id="4c911111-6a66-4cdf-a718-e61e34a4f32a" listenerConfig="LIstenerConfig" clientSecurityProvider="clientSecurityProvider"/>
+ -->
+	<flow name="authorize-resource-flow" doc:id="4b8e102b-dfee-4cc8-b588-706d19a0269a">
+		<http:listener doc:name="Listener" doc:id="bf4f8607-ae64-4875-b0f2-0bf32b86d17b" path="/new" config-ref="listenerConfig"/>
+		<logger level="INFO" doc:name="Logger" doc:id="d93ff03f-1d51-4a73-81a2-fd05e2f8ef69" message="authorize-resource-flow"/>
+		<oauth2-provider:create-client doc:name="Create client" doc:id="65a46a75-d686-407a-bfb3-6f917f72b245" config-ref="OAuth2Provider" clientId="clientId1" secret="clientSecret1"/> 
+	</flow>
+	
+	<flow name="validate-resource-flow">
+        <http:listener path="/validatetest" config-ref="listenerConfig"/>
+        <logger level="INFO" doc:name="Logger" doc:id="47de1013-028c-4978-b5f1-d910041b1826" message="validate-resource-flow"/>
+		<oauth2-provider:validate-token config-ref="OAuth2Provider"/> 
+    </flow>
+
+</mule>
